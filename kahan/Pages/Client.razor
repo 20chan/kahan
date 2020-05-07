@@ -1,0 +1,55 @@
+﻿@page "/client"
+
+@using kahan.Hubs
+@inject NavigationManager navigationManager
+
+<h1>Client</h1>
+
+<input type="text" @bind="@Nickname" />
+<button type="button" @onclick="@Register">Register as @Nickname</button>
+<p>currently registerd as @client.Nickname</p>
+
+@if (requestedIds == null) {
+    <p>
+        <em>Loading...</em>
+    </p>
+} else {
+    <table class="table">
+        <thead>
+        <tr>
+            <th>id</th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var id in requestedIds) {
+            <tr>
+                <td>@id</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    public string Nickname { get; set; }
+
+    MusicClient client;
+    List<string> requestedIds;
+
+    async Task Register() {
+        client.Nickname = Nickname;
+        await client.Register();
+    }
+
+    protected override async Task OnInitializedAsync() {
+        var url = navigationManager.BaseUri;
+        client = new MusicClient(url);
+        client.OnRequestPlay += s => {
+            requestedIds.Add(s);
+            StateHasChanged();
+        };
+
+        requestedIds = new List<string>();
+        await client.StartAsync();
+    }
+}

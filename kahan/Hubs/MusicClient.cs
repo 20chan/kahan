@@ -37,7 +37,7 @@ namespace kahan.Hubs {
 
             started = true;
 
-            await hub.SendAsync(Messages.RegisterClient, Nickname);
+            await Register();
         }
 
         public async Task StopAsync() {
@@ -53,6 +53,10 @@ namespace kahan.Hubs {
 
         public async ValueTask DisposeAsync() {
             await StopAsync();
+        }
+
+        public async Task Register() {
+            await hub.SendAsync(Messages.RegisterClient, Nickname);
         }
 
         private async Task PingStatus() {

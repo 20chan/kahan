@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
@@ -22,12 +23,22 @@ namespace kahan.Hubs {
             await QueryStatusTo(Clients.Client(id));
         }
 
+        public override async Task OnDisconnectedAsync(Exception exception) {
+            var id = Context.ConnectionId;
+            Console.WriteLine($"disconneted {exception?.Message} {id}");
+
+            if (clients.Remove(id)) {
+                await QueryStatusTo(Clients.Group(GroupAdmin));
+            }
+            await base.OnDisconnectedAsync(exception);
+        }
+
         public async Task PongStatus(string id, string nickname) {
             clients[id] = nickname;
         }
 
         public async Task RequestPlay(string user, string parameter) {
-            await Clients.Group(GroupClient).SendAsync(user, parameter);
+            await Clients.Client(user).SendAsync(Messages.RequestPlay, parameter);
         }
 
         private async Task QueryStatusTo(IClientProxy targets) {

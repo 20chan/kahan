@@ -1,0 +1,57 @@
+﻿@page "/admin"
+
+@using kahan.Hubs
+@inject NavigationManager navigationManager
+
+<h1>Admin</h1>
+
+@if (clients == null) {
+    <p>
+        <em>Loading...</em>
+    </p>
+} else {
+    <table class="table">
+        <thead>
+        <tr>
+            <th>id</th>
+            <th>nickname</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var c in clients) {
+            <tr>
+                <td>@c[0]</td>
+                <td>@c[1]</td>
+                <td><input @bind="@c[2]" /><button @onclick="@(async () => { await RequestPlay(c[0], c[2]); })"></button></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+@code {
+    AdminClient client;
+    string[][] clients;
+
+    protected override async Task OnInitializedAsync() {
+        clients = new string[0][];
+
+        var url = navigationManager.BaseUri;
+        client = new AdminClient(url);
+        client.OnQueryStatus += parameters => {
+            clients = new string[parameters.Count][];
+            var i = 0;
+            foreach (var p in parameters) {
+                clients[i++] = new[] { p.Key, p.Value, "" };
+            }
+            StateHasChanged();
+        };
+
+        await client.StartAsync();
+    }
+
+    async Task RequestPlay(string id, string value) {
+        await client.RequestPlay(id, value);
+    }
+}
