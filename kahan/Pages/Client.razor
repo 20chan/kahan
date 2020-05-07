@@ -2,6 +2,7 @@
 
 @using kahan.Hubs
 @inject NavigationManager navigationManager
+@inject IJSRuntime JSRuntime
 
 <h1>Client</h1>
 
@@ -11,6 +12,12 @@
 @if (client != null) {
     <p>currently registerd as @client.Nickname</p>
 }
+
+<p>@CurrentTime / @Duration</p>
+<button class="d-inline" @onclick="@Play">[PLAY]</button>
+<button class="d-inline" @onclick="@Stop">[STOP]</button>
+<button class="d-inline" @onclick="@(() => AddTime(-30))">[-30s]</button>
+<button class="d-inline" @onclick="@(() => AddTime(+30))">[+30s]</button>
 
 @if (requestedIds == null) {
     <p>
@@ -26,7 +33,7 @@
         <tbody>
         @foreach (var id in requestedIds) {
             <tr>
-                <td>@id</td>
+                <td>@id <button @onclick="@(() => LoadVideo(id))">play</button></td>
             </tr>
         }
         </tbody>
@@ -35,6 +42,11 @@
 
 @code {
     public string Nickname { get; set; }
+
+    public string CurrentTime => ToHHMMSS((int)_current);
+    public string Duration => ToHHMMSS((int)_duration);
+
+    private float _current, _duration;
 
     MusicClient client;
     List<string> requestedIds;
@@ -56,5 +68,31 @@
         requestedIds = new List<string>();
         await client.StartAsync();
         StateHasChanged();
+
+        var timer = new System.Threading.Timer(async _ => {
+            _current = await JSRuntime.InvokeAsync<float>("getPlayerCurrentTime");
+            _duration = await JSRuntime.InvokeAsync<float>("getPlayerDuration");
+            await InvokeAsync(StateHasChanged);
+        }, null, 0, 100);
+    }
+
+    async Task LoadVideo(string id) {
+        await JSRuntime.InvokeVoidAsync("loadVideo", id);
+    }
+
+    async Task Play() {
+        await JSRuntime.InvokeVoidAsync("player.playVideo");
+    }
+
+    async Task Stop() {
+        await JSRuntime.InvokeVoidAsync("player.stopVideo");
+    }
+
+    async Task AddTime(float delta) {
+        await JSRuntime.InvokeVoidAsync("addTime", delta);
+    }
+
+    string ToHHMMSS(int span) {
+        return $"{span / 3600:00}:{span % 3600 / 60:00}:{span % 60:00}";
     }
 }

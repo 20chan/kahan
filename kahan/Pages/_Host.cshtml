@@ -31,6 +31,42 @@
     <a class="dismiss">🗙</a>
 </div>
 
+<div id="music-player" style="display:none"></div>
+
 <script src="_framework/blazor.server.js"></script>
+<script src = "https://www.youtube.com/iframe_api"></script>
+<script>
+function onYouTubeIframeAPIReady() {
+    window.player = new YT.Player('music-player', {
+        videoId: 'p1asWglxMZs',
+        events: {
+            'onReady': onPlayerReady,
+            'onStateChange': onPlayerStateChange
+    }});
+}
+function onPlayerReady(event) {
+    // event.target.playVideo();
+}
+function onPlayerStateChange(event) {
+}
+function getPlayerCurrentTime() {
+    if (window.player.getCurrentTime === undefined) {
+        return 0;
+    }
+    return window.player.getCurrentTime();
+}
+function getPlayerDuration() {
+    if (window.player.getCurrentTime === undefined) {
+        return 0;
+    }
+    return window.player.getDuration();
+}
+function loadVideo(id) {
+    window.player.loadVideoById(id, 0, "large");
+}
+function addTime(time) {
+    window.player.seekTo(player.getCurrentTime() + time, true);
+}
+</script>
 </body>
 </html>
