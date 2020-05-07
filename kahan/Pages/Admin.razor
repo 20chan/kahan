@@ -34,7 +34,8 @@
     AdminClient client;
     string[][] clients;
 
-    protected override async Task OnInitializedAsync() {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (client != null) return;
         clients = new string[0][];
 
         var url = navigationManager.BaseUri;
@@ -49,6 +50,7 @@
         };
 
         await client.StartAsync();
+        StateHasChanged();
     }
 
     async Task RequestPlay(string id, string value) {

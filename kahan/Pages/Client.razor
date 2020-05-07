@@ -7,7 +7,10 @@
 
 <input type="text" @bind="@Nickname" />
 <button type="button" @onclick="@Register">Register as @Nickname</button>
-<p>currently registerd as @client.Nickname</p>
+
+@if (client != null) {
+    <p>currently registerd as @client.Nickname</p>
+}
 
 @if (requestedIds == null) {
     <p>
@@ -41,7 +44,8 @@
         await client.Register();
     }
 
-    protected override async Task OnInitializedAsync() {
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (client != null) return;
         var url = navigationManager.BaseUri;
         client = new MusicClient(url);
         client.OnRequestPlay += s => {
@@ -51,5 +55,6 @@
 
         requestedIds = new List<string>();
         await client.StartAsync();
+        StateHasChanged();
     }
 }
