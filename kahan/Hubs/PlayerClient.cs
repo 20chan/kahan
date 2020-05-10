@@ -4,15 +4,16 @@ using Microsoft.AspNetCore.SignalR.Client;
 
 namespace kahan.Hubs {
     public class PlayerClient : IAsyncDisposable {
-        public string Nickname;
+        public PlayerInfo Info;
 
-        public event Action<string> OnRequestPlay;
+        public event Action<PlayerInfo> OnInfoUpdated;
 
         private readonly string hubUrl;
         private bool started;
         private HubConnection hub;
 
         public PlayerClient(string siteUrl) {
+            Info = new PlayerInfo();
             hubUrl = siteUrl.TrimEnd('/') + Messages.HUBPATH;
         }
 
@@ -25,12 +26,8 @@ namespace kahan.Hubs {
                 .WithUrl(hubUrl)
                 .Build();
 
-            hub.On(Messages.PingStatus, async () => {
-                await PingStatus();
-            });
-
-            hub.On<string>(Messages.RequestPlay, parameter => {
-                OnRequestPlay?.Invoke(parameter);
+            hub.On<PlayerInfo>(Messages.UpdatePlayerInfo, info => {
+                OnInfoUpdated?.Invoke(info);
             });
 
             await hub.StartAsync();
@@ -56,11 +53,11 @@ namespace kahan.Hubs {
         }
 
         public async Task Register() {
-            await hub.SendAsync(Messages.RegisterClient, Nickname);
+            await hub.SendAsync(Messages.RegisterPlayer, Info.Nickname);
         }
 
-        private async Task PingStatus() {
-            await hub.SendAsync(Messages.PongStatus, Nickname);
+        public async Task UpdateInfo() {
+            await hub.SendAsync(Messages.UpdatePlayerInfo, Info);
         }
     }
 }

@@ -6,53 +6,40 @@
 
 <h1>Client</h1>
 
-<input type="text" @bind="@Nickname" />
-<button type="button" @onclick="@Register">Register as @Nickname</button>
 
 @if (client != null) {
-    <p>currently registerd as @client.Nickname</p>
-}
+    <input type="text" @bind="@Nickname" />
+    <button type="button" @onclick="@Register">Register as @Nickname</button>
 
-<p>@CurrentTime / @Duration</p>
-<button class="d-inline" @onclick="@Play">[PLAY]</button>
-<button class="d-inline" @onclick="@Stop">[STOP]</button>
-<button class="d-inline" @onclick="@(() => AddTime(-30))">[-30s]</button>
-<button class="d-inline" @onclick="@(() => AddTime(+30))">[+30s]</button>
-
-@if (requestedIds == null) {
-    <p>
-        <em>Loading...</em>
-    </p>
-} else {
-    <table class="table">
-        <thead>
-        <tr>
-            <th>id</th>
-        </tr>
-        </thead>
-        <tbody>
-        @foreach (var id in requestedIds) {
-            <tr>
-                <td>@id <button @onclick="@(() => LoadVideo(id))">play</button></td>
-            </tr>
-        }
-        </tbody>
-    </table>
+    <p>@CurrentTime / @Duration</p>
+    <button class="d-inline" @onclick="@Play">[PLAY]</button>
+    <button class="d-inline" @onclick="@Stop">[STOP]</button>
+    <button class="d-inline" @onclick="@(() => AddTime(-30))">[-30s]</button>
+    <button class="d-inline" @onclick="@(() => AddTime(+30))">[+30s]</button>
 }
 
 @code {
-    public string Nickname { get; set; }
+    public string Nickname {
+        get => client.Info.Nickname;
+        set => client.Info.Nickname = value;
+    }
 
     public string CurrentTime => ToHHMMSS((int)_current);
     public string Duration => ToHHMMSS((int)_duration);
 
-    private float _current, _duration;
+    private float _current {
+        get => client.Info.Current;
+        set => client.Info.Current = value;
+    }
+
+    private float _duration {
+        get => client.Info.Duration;
+        set => client.Info.Duration = value;
+    }
 
     PlayerClient client;
-    List<string> requestedIds;
 
     async Task Register() {
-        client.Nickname = Nickname;
         await client.Register();
     }
 
@@ -60,23 +47,39 @@
         if (client != null) return;
         var url = navigationManager.BaseUri;
         client = new PlayerClient(url);
-        client.OnRequestPlay += s => {
-            requestedIds.Add(s);
+        client.OnInfoUpdated += async info => {
+            client.Info.Nickname = info.Nickname;
+            if (client.Info.SongId != info.SongId) {
+                await LoadVideo(info.SongId);
+                client.Info.SongId = info.SongId;
+            }
+            if (client.Info.IsPlaying != info.IsPlaying) {
+                if (info.IsPlaying) {
+                    await JSRuntime.InvokeVoidAsync("player.playVideo");
+                } else {
+                    await JSRuntime.InvokeVoidAsync("player.pauseVideo");
+                }
+                client.Info.IsPlaying = info.IsPlaying;
+            }
             StateHasChanged();
         };
 
-        requestedIds = new List<string>();
         await client.StartAsync();
         StateHasChanged();
 
-        var timer = new System.Threading.Timer(async _ => {
+        new System.Threading.Timer(async _ => {
             _current = await JSRuntime.InvokeAsync<float>("getPlayerCurrentTime");
             _duration = await JSRuntime.InvokeAsync<float>("getPlayerDuration");
             await InvokeAsync(StateHasChanged);
         }, null, 0, 100);
+
+        new System.Threading.Timer(async _ => {
+            await client.UpdateInfo();
+        }, null, 0, 1000);
     }
 
     async Task LoadVideo(string id) {
+        client.Info.SongId = id;
         await JSRuntime.InvokeVoidAsync("loadVideo", id);
     }
 

@@ -10,20 +10,27 @@
         <em>Loading...</em>
     </p>
 } else {
+    <button @onclick="@client.RequestAllPlayerInfo">REFRESH</button>
     <table class="table">
         <thead>
         <tr>
             <th>id</th>
             <th>nickname</th>
-            <th></th>
+            <th>song id</th>
+            <th>isplaying</th>
+            <th>time</th>
+            <th>UPDATE</th>
         </tr>
         </thead>
         <tbody>
-        @foreach (var c in clients) {
+        @foreach (var p in clients) {
             <tr>
-                <td>@c[0]</td>
-                <td>@c[1]</td>
-                <td><input @bind="@c[2]" /><button @onclick="@(async () => { await RequestPlay(c[0], c[2]); })"></button></td>
+                <td>@p.Key</td>
+                <td><input @bind="@p.Value.Nickname" /></td>
+                <td><input @bind="@p.Value.SongId" /></td>
+                <td><button @onclick="@(() => p.Value.IsPlaying = !p.Value.IsPlaying)">@(p.Value.IsPlaying ? "Playing" : "Paused")</button></td>
+                <td>@p.Value.Current.ToString("0") / @p.Value.Duration.ToString("0")</td>
+                <td><button @onclick="@(async () => await UpdatePlayerInfo(p.Key))">UPDATE!</button></td>
             </tr>
         }
         </tbody>
@@ -32,28 +39,28 @@
 
 @code {
     AdminClient client;
-    string[][] clients;
+    Dictionary<string, PlayerInfo> clients;
 
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (client != null) return;
-        clients = new string[0][];
+        clients = new Dictionary<string, PlayerInfo>();
 
         var url = navigationManager.BaseUri;
         client = new AdminClient(url);
-        client.OnQueryStatus += parameters => {
-            clients = new string[parameters.Count][];
-            var i = 0;
-            foreach (var p in parameters) {
-                clients[i++] = new[] { p.Key, p.Value, "" };
-            }
+
+        client.OnAllPlayerInfoUpdate += c => {
+            clients = c;
             StateHasChanged();
         };
 
         await client.StartAsync();
+        await client.RequestAllPlayerInfo();
         StateHasChanged();
     }
 
-    async Task RequestPlay(string id, string value) {
-        await client.RequestPlay(id, value);
+    async Task UpdatePlayerInfo(string id) {
+        clients[id].Current = 0;
+        clients[id].Duration = 0;
+        await client.UploadPlayerInfo(id, clients[id]);
     }
 }

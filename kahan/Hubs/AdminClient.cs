@@ -7,7 +7,7 @@ namespace kahan.Hubs {
     public class AdminClient : IAsyncDisposable {
         public string Nickname;
 
-        public event Action<Dictionary<string, string>> OnQueryStatus;
+        public event Action<Dictionary<string, PlayerInfo>> OnAllPlayerInfoUpdate;
 
         private readonly string hubUrl;
         private bool started;
@@ -26,8 +26,8 @@ namespace kahan.Hubs {
                 .WithUrl(hubUrl)
                 .Build();
 
-            hub.On<Dictionary<string, string>>(Messages.QueryStatus, parameter => {
-                OnQueryStatus?.Invoke(parameter);
+            hub.On<Dictionary<string, PlayerInfo>>(Messages.UpdateAllPlayerInfo, parameter => {
+                OnAllPlayerInfoUpdate?.Invoke(parameter);
             });
 
             await hub.StartAsync();
@@ -52,8 +52,12 @@ namespace kahan.Hubs {
             await StopAsync();
         }
 
-        public async Task RequestPlay(string userId, string parameter) {
-            await hub.SendAsync(Messages.RequestPlay, userId, parameter);
+        public async Task RequestAllPlayerInfo() {
+            await hub.SendAsync(Messages.RequestAllPlayerInfo);
+        }
+
+        public async Task UploadPlayerInfo(string userId, PlayerInfo parameter) {
+            await hub.SendAsync(Messages.UploadPlayerInfo, userId, parameter);
         }
     }
 }

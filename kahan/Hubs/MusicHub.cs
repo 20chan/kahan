@@ -5,44 +5,52 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace kahan.Hubs {
     public class MusicHub : Hub {
-        private const string GroupClient = "groupClient";
+        private const string GroupPlayer = "groupPlayer";
         private const string GroupAdmin = "groupAdmin";
 
-        private static readonly Dictionary<string, string> clients = new Dictionary<string, string>();
+        private static readonly Dictionary<string, PlayerInfo> players = new Dictionary<string, PlayerInfo>();
 
-        public async Task RegisterClient(string nickname) {
+        public async Task RegisterPlayer(string nickname) {
             var id = Context.ConnectionId;
-            clients[id] = nickname;
-            await Groups.AddToGroupAsync(id, GroupClient);
-            await QueryStatusTo(Clients.Group(GroupAdmin));
+            players[id] = new PlayerInfo {
+                Nickname = nickname,
+            };
+            await Groups.AddToGroupAsync(id, GroupPlayer);
+            await SendAllPlayerInfoTo(Clients.Group(GroupAdmin));
         }
 
         public async Task RegisterAdmin() {
             var id = Context.ConnectionId;
             await Groups.AddToGroupAsync(id, GroupAdmin);
-            await QueryStatusTo(Clients.Client(id));
+            await SendAllPlayerInfoTo(Clients.Client(id));
         }
 
         public override async Task OnDisconnectedAsync(Exception exception) {
             var id = Context.ConnectionId;
             Console.WriteLine($"disconneted {exception?.Message} {id}");
 
-            if (clients.Remove(id)) {
-                await QueryStatusTo(Clients.Group(GroupAdmin));
+            if (players.Remove(id)) {
+                await SendAllPlayerInfoTo(Clients.Group(GroupAdmin));
             }
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task PongStatus(string id, string nickname) {
-            clients[id] = nickname;
+        public void UpdatePlayerInfo(PlayerInfo info) {
+            var id = Context.ConnectionId;
+            players[id] = info;
         }
 
-        public async Task RequestPlay(string user, string parameter) {
-            await Clients.Client(user).SendAsync(Messages.RequestPlay, parameter);
+        public async Task UploadPlayerInfo(string id, PlayerInfo info) {
+            await Clients.Client(id).SendAsync(Messages.UpdatePlayerInfo, info);
         }
 
-        private async Task QueryStatusTo(IClientProxy targets) {
-            await targets.SendAsync(Messages.QueryStatus, clients);
+        public async Task RequestAllPlayerInfo() {
+            var id = Context.ConnectionId;
+            await SendAllPlayerInfoTo(Clients.Client(id));
+        }
+
+        private async Task SendAllPlayerInfoTo(IClientProxy targets) {
+            await targets.SendAsync(Messages.UpdateAllPlayerInfo, players);
         }
     }
 }
