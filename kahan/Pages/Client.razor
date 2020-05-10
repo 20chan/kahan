@@ -48,7 +48,7 @@
 
     private float _current, _duration;
 
-    MusicClient client;
+    PlayerClient client;
     List<string> requestedIds;
 
     async Task Register() {
@@ -59,7 +59,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender) {
         if (client != null) return;
         var url = navigationManager.BaseUri;
-        client = new MusicClient(url);
+        client = new PlayerClient(url);
         client.OnRequestPlay += s => {
             requestedIds.Add(s);
             StateHasChanged();

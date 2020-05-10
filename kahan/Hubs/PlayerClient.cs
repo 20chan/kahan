@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace kahan.Hubs {
-    public class MusicClient : IAsyncDisposable {
+    public class PlayerClient : IAsyncDisposable {
         public string Nickname;
 
         public event Action<string> OnRequestPlay;
@@ -12,7 +12,7 @@ namespace kahan.Hubs {
         private bool started;
         private HubConnection hub;
 
-        public MusicClient(string siteUrl) {
+        public PlayerClient(string siteUrl) {
             hubUrl = siteUrl.TrimEnd('/') + Messages.HUBPATH;
         }
 
